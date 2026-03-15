@@ -3,26 +3,13 @@ import google.generativeai as genai
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
 import json
 import io
-import requests
-import base64
-import urllib.parse
 
-# --- YARDIMCI FONKSİYONLAR ---
 def hex_to_rgb(hex_str):
     hex_str = hex_str.lstrip('#')
     return tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4))
-
-def fetch_image_from_url(url):
-    """Verilen URL'den resmi indirir ve PPTX için hazırlar."""
-    try:
-        response = requests.get(url, timeout=15)
-        response.raise_for_status()
-        return io.BytesIO(response.content)
-    except Exception as e:
-        print(f"Resim indirilemedi: {e}")
-        return None
 
 def create_pptx(json_data):
     data = json.loads(json_data)
@@ -48,47 +35,47 @@ def create_pptx(json_data):
         title_p.font.size = Pt(32)
         title_p.font.color.rgb = RGBColor(accent_rgb[0], accent_rgb[1], accent_rgb[2])
         
-        # Metin Kutusu (Sol Taraf)
-        text_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.5), Inches(4.5), Inches(5))
-        text_frame = text_box.text_frame
-        text_frame.word_wrap = True
-        for bullet in slide_data["content_bullets"]:
-            p = text_frame.add_paragraph()
-            p.text = f"• {bullet}"
-            p.font.size = Pt(18)
-            p.font.color.rgb = RGBColor(text_color, text_color, text_color)
-            
-        # GÖRSEL MOTORU (Sağ Taraf)
-        visual_data = slide_data.get("visual_element", {})
-        v_type = visual_data.get("type")
+        layout_type = slide_data.get("layout_type", "text_only")
         
-        image_stream = None
-        
-        if v_type == "ai_image":
-            # Fütüristik Görsel Üretimi (Pollinations API)
-            prompt = visual_data.get("prompt", "cybersecurity concept")
-            # Güvenlik ve tasarım için promptu güçlendiriyoruz
-            enhanced_prompt = f"{prompt}, highly detailed, 8k resolution, cyberpunk aesthetic, professional"
-            encoded_prompt = urllib.parse.quote(enhanced_prompt)
-            image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=800&height=600&nologo=true"
-            image_stream = fetch_image_from_url(image_url)
+        if layout_type == "text_only":
+            body_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.5), Inches(9), Inches(5))
+            body_frame = body_box.text_frame
+            body_frame.word_wrap = True
+            for bullet in slide_data["content_bullets"]:
+                p = body_frame.add_paragraph()
+                p.text = f"• {bullet}"
+                p.font.size = Pt(20)
+                p.font.color.rgb = RGBColor(text_color, text_color, text_color)
+                
+        elif layout_type == "text_with_image_placeholder":
+            # Metin Kutusu (Sol Taraf)
+            text_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.5), Inches(4.5), Inches(5))
+            text_frame = text_box.text_frame
+            text_frame.word_wrap = True
+            for bullet in slide_data["content_bullets"]:
+                p = text_frame.add_paragraph()
+                p.text = f"• {bullet}"
+                p.font.size = Pt(18)
+                p.font.color.rgb = RGBColor(text_color, text_color, text_color)
+                
+            # GÖRSEL ALANI (Sağ Taraf - Yuvarlak Köşeli Şık Kutu)
+            placeholder = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE, 
+                Inches(5.2), Inches(1.8), Inches(4.3), Inches(4.0)
+            )
             
-        elif v_type == "mermaid":
-            # Teknik Şema Üretimi (Mermaid.ink)
-            code = visual_data.get("code", "graph TD;\nA-->B;")
-            # Mermaid kodunu base64'e çevir
-            encoded_code = base64.b64encode(code.encode('utf-8')).decode('ascii')
-            # Koyu arka plan için şema renklerini ayarlayan bir yapı
-            mermaid_url = f"https://mermaid.ink/img/{encoded_code}?bgColor=!black"
-            image_stream = fetch_image_from_url(mermaid_url)
-
-        # Eğer resim başarıyla üretildiyse sağ tarafa ekle
-        if image_stream:
-            try:
-                # Resmi sağa hizala: Left=5.2, Top=1.8, Genişlik=4.3 inç
-                slide.shapes.add_picture(image_stream, Inches(5.2), Inches(1.8), width=Inches(4.3))
-            except Exception as e:
-                print(f"Slayta resim eklenirken hata: {e}")
+            # Kutunun rengini arka plana göre hafif zıt yapıyoruz
+            box_color = 40 if sum(bg_rgb) < 380 else 220
+            placeholder.fill.solid()
+            placeholder.fill.fore_color.rgb = RGBColor(box_color, box_color, box_color)
+            placeholder.line.color.rgb = RGBColor(accent_rgb[0], accent_rgb[1], accent_rgb[2])
+            
+            # Kutu İçine Nano Banana 2 Promptunu Yazdırıyoruz
+            p_text = placeholder.text_frame.paragraphs[0]
+            nano_prompt = slide_data.get("image_prompt", "Cybersecurity concept art")
+            p_text.text = f"🖼️ GÖRSEL ALANI\n\nBu kutuyu silip yerine Nano Banana 2 ile üreteceğiniz resmi koyun.\n\nKopyalamanız Gereken Prompt:\n'{nano_prompt}'"
+            p_text.font.size = Pt(12)
+            p_text.font.color.rgb = RGBColor(text_color, text_color, text_color)
 
     ppt_stream = io.BytesIO()
     prs.save(ppt_stream)
@@ -98,7 +85,7 @@ def create_pptx(json_data):
 # --- UYGULAMA ARAYÜZÜ ---
 st.set_page_config(page_title="Cyber-Slide AI", page_icon="🛡️", layout="wide")
 st.title("🛡️ Cyber-Slide AI: Akıllı Sunum Mimarı")
-st.markdown("Fütüristik görseller ve teknik şemalarla donatılmış siber güvenlik sunumları hazırlayın.")
+st.markdown("Kusursuz metinler ve Nano Banana 2 için özel görsel komutları üreten asistan.")
 
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 if not API_KEY:
@@ -109,13 +96,13 @@ genai.configure(api_key=API_KEY)
 
 with st.sidebar:
     st.header("⚙️ Eğitim Parametreleri")
-    topic = st.text_input("Konu Nedir?", "Man in the Middle Attack (MitM)")
+    topic = st.text_input("Konu Nedir?", "Zero Trust Architecture")
     language = st.selectbox("Sunum Dili", ["English", "Nederlands (Dutch)"])
     slide_count = st.slider("Slayt Sayısı", min_value=3, max_value=20, value=5)
-    design_prompt = st.text_area("Tasarım", "Koyu arka plan, neon mavi ve hacker estetiği.")
+    design_prompt = st.text_area("Tasarım", "Koyu arka plan, siberpunk neon yeşil başlıklar.")
 
 if st.button("🚀 Sunumu Üret", type="primary"):
-    with st.spinner("Gemini düşünüyor, AI resimler çiziyor ve şemalar derleniyor... (Bu işlem 30-40 saniye sürebilir)"):
+    with st.spinner("Slaytlar tasarlanıyor ve Nano Banana 2 komutları yazılıyor..."):
         model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
         
         system_prompt = f"""
@@ -125,37 +112,25 @@ if st.button("🚀 Sunumu Üret", type="primary"):
         Slide Count: Exactly {slide_count} slides.
         Design Vibe: {design_prompt}
         
-        CRITICAL VISUAL RULES:
-        For EVERY slide, you MUST choose between two visual types:
-        1. "ai_image": For abstract, futuristic, or conceptual slides. Provide a highly descriptive English prompt for an AI image generator (e.g., "A glowing digital padlock in a neon cyberspace, 3D render").
-        2. "mermaid": For technical architectures, flows, or processes. Provide valid Mermaid.js flowchart code.
+        Rules for Layouts:
+        - "text_only": Standard slide, full width text.
+        - "text_with_image_placeholder": Text on the left, and you MUST provide an "image_prompt".
         
-        Balance the presentation: Use both ai_image and mermaid slides.
+        The "image_prompt" should be a highly detailed, professional English prompt designed for an AI image generator (like Nano Banana 2 / Midjourney). Include style keywords like "cyberpunk", "hacker aesthetic", "3D render", "high tech", "infographic style".
         
         Output STRICTLY in this JSON structure:
         {{
           "presentation_metadata": {{
             "global_background_color_hex": "#111111",
-            "global_accent_color_hex": "#00FFFF"
+            "global_accent_color_hex": "#00FF00"
           }},
           "slides": [
             {{
               "slide_number": 1,
-              "slide_title": "Slide Title",
+              "layout_type": "text_with_image_placeholder",
+              "slide_title": "Slide Title Here",
               "content_bullets": ["Point 1", "Point 2"],
-              "visual_element": {{
-                "type": "ai_image",
-                "prompt": "Hacker typing on a laptop with glowing blue code in the background, cinematic lighting"
-              }}
-            }},
-            {{
-              "slide_number": 2,
-              "slide_title": "Attack Flow",
-              "content_bullets": ["Step 1", "Step 2"],
-              "visual_element": {{
-                "type": "mermaid",
-                "code": "graph LR\\n A[Attacker] --> B(Victim)\\n B --> C{{Server}}"
-              }}
+              "image_prompt": "A glowing digital padlock in a dark neon cyberspace, network nodes connecting, 3D isometric view, unreal engine 5, highly detailed, cybersecurity concept."
             }}
           ]
         }}
@@ -164,7 +139,7 @@ if st.button("🚀 Sunumu Üret", type="primary"):
         try:
             response = model.generate_content(system_prompt)
             ppt_file = create_pptx(response.text)
-            st.success("🎉 Sunumunuz harika görsellerle hazırlandı!")
-            st.download_button("📥 PowerPoint Dosyasını İndir", data=ppt_file, file_name="Gorsel_Siber_Sunum.pptx")
+            st.success("🎉 Sunumunuz hazır!")
+            st.download_button("📥 PowerPoint Dosyasını İndir", data=ppt_file, file_name="Siber_Sunum_Pro.pptx")
         except Exception as e:
             st.error(f"Hata: {e}")
