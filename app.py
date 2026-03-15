@@ -87,6 +87,7 @@ st.title("🛡️ Cyber-Slide AI: Akıllı Sunum Mimarı")
 
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 if not API_KEY:
+    st.error("API Key eksik!")
     st.stop()
 
 genai.configure(api_key=API_KEY)
@@ -95,4 +96,28 @@ with st.sidebar:
     st.header("⚙️ Eğitim Parametreleri")
     topic = st.text_input("Konu Nedir?", "Zero Trust Architecture in Cloud")
     language = st.selectbox("Sunum Dili", ["English", "Nederlands (Dutch)"])
-    slide_count = st.slider("
+    slide_count = st.slider("Slayt Sayısı", min_value=3, max_value=20, value=5)
+    design_prompt = st.text_area("Tasarım", "Koyu gri arka plan, başlıklar neon yeşil olsun.")
+
+if st.button("🚀 Sunumu Üret", type="primary"):
+    with st.spinner("Slaytlar çiziliyor ve grafikler oluşturuluyor..."):
+        model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
+        
+        system_prompt = f"""
+        You are an elite Cybersecurity Instructor. Generate a presentation.
+        Topic: {topic}
+        Language: {language}
+        Slide Count: Exactly {slide_count} slides.
+        Design Vibe: {design_prompt}
+        
+        Rules for Layouts:
+        - "text_only": Standard slide.
+        - "text_and_chart": You MUST invent realistic cybersecurity statistical data and output it for a Bar Chart.
+        
+        Make sure at least 1 or 2 slides use "text_and_chart" to show data.
+        
+        Output STRICTLY in this JSON structure:
+        {{
+          "presentation_metadata": {{
+            "global_background_color_hex": "#222222",
+            "global_accent_color_hex": "#00FF00"
