@@ -135,7 +135,7 @@ if st.button("🚀 Sunumu Üret", type="primary"):
         
         # Gemini Modeli Ayarları (JSON formatında çıkış vermeye zorluyoruz)
         # GÜNCELLEME: En kararlı sürüm olan gemini-1.5-flash'ı kullanıyoruz.
-        model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "application/json"})
+        model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
         
         system_prompt = f"""
         You are an elite Cybersecurity Instructor. Generate a professional presentation.
