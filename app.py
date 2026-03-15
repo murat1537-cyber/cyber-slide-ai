@@ -87,7 +87,7 @@ if st.button("🚀 Sunumu Üret", type="primary"):
     with st.spinner("Yapay zeka konuyu analiz ediyor ve slaytları sıfırdan çiziyor... Lütfen bekleyin."):
         
         # Gemini Modeli Ayarları (JSON formatında çıkış vermeye zorluyoruz)
-        model = genai.GenerativeModel('gemini-1.5-pro', generation_config={"response_mime_type": "application/json"})
+        model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "application/json"})
         
         system_prompt = f"""
         You are an elite Cybersecurity Instructor. Generate a professional presentation.
