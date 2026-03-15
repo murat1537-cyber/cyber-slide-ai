@@ -28,7 +28,7 @@ def create_pptx(json_data):
         slide.background.fill.solid()
         slide.background.fill.fore_color.rgb = RGBColor(bg_rgb[0], bg_rgb[1], bg_rgb[2])
         
-        # Başlık - Genişliği artırdık, yazı tipini küçülttük ki sığsın
+        # Başlık
         title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.4), Inches(9), Inches(1))
         title_p = title_box.text_frame.paragraphs[0]
         title_p.text = slide_data["slide_title"]
@@ -61,7 +61,7 @@ def create_pptx(json_data):
                 p.font.size = Pt(18)
                 p.font.color.rgb = RGBColor(text_color, text_color, text_color)
                 
-            # GRAFİK SAĞ TARAFTA (Left: 5.2 inç, birbirine değmez)
+            # GRAFİK SAĞ TARAFTA
             visual_data = slide_data.get("visual_element", {})
             if visual_data.get("type") == "bar_chart":
                 chart_data = CategoryChartData()
@@ -73,7 +73,6 @@ def create_pptx(json_data):
                 chart = slide.shapes.add_chart(
                     XL_CHART_TYPE.COLUMN_CLUSTERED, x, y, cx, cy, chart_data
                 ).chart
-                # Grafik başlığını yapay zekadan al
                 chart.has_title = True
                 chart.chart_title.text_frame.text = visual_data.get("title", "Chart")
 
@@ -96,38 +95,4 @@ with st.sidebar:
     st.header("⚙️ Eğitim Parametreleri")
     topic = st.text_input("Konu Nedir?", "Zero Trust Architecture in Cloud")
     language = st.selectbox("Sunum Dili", ["English", "Nederlands (Dutch)"])
-    slide_count = st.slider("Slayt Sayısı", min_value=3, max_value=20, value=5)
-    design_prompt = st.text_area("Tasarım", "Koyu gri arka plan, başlıklar neon yeşil olsun.")
-
-if st.button("🚀 Sunumu Üret", type="primary"):
-    with st.spinner("Slaytlar çiziliyor ve grafikler oluşturuluyor..."):
-        model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
-        
-        system_prompt = f"""
-        You are an elite Cybersecurity Instructor. Generate a presentation.
-        Topic: {topic}
-        Language: {language}
-        Slide Count: Exactly {slide_count} slides.
-        Design Vibe: {design_prompt}
-        
-        Rules for Layouts:
-        - "text_only": Standard slide.
-        - "text_and_chart": You MUST invent realistic cybersecurity statistical data and output it for a Bar Chart.
-        
-        Make sure at least 1 or 2 slides use "text_and_chart" to show data (like attack statistics, budget, etc.).
-        
-        Output STRICTLY in this JSON structure:
-        {{
-          "presentation_metadata": {{
-            "global_background_color_hex": "#222222",
-            "global_accent_color_hex": "#00FF00"
-          }},
-          "slides": [
-            {{
-              "slide_number": 1,
-              "layout_type": "text_and_chart",
-              "slide_title": "Slide Title Here",
-              "content_bullets": ["Short text 1", "Short text 2"],
-              "visual_element": {{
-                "type": "bar_chart",
-                "title": "Ransom
+    slide_count = st.slider("
